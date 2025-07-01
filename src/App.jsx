@@ -7,10 +7,13 @@ const App = () => {
   const [loading, setLoading] = useState(false);
   const bottomRef = useRef(null);
 
+  const getTime = () =>
+    new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
   const handleAsk = async () => {
     if (!prompt.trim()) return;
 
-    const newMessages = [...messages, { role: 'user', text: prompt }];
+    const newMessages = [...messages, { role: 'user', text: prompt, time: getTime() }];
     setMessages(newMessages);
     setPrompt('');
     setLoading(true);
@@ -18,9 +21,16 @@ const App = () => {
     try {
       const res = await axios.post('http://localhost:3000/ask-gemini', { prompt });
       const aiResponse = res.data.response || 'No response from Gemini.';
-      setMessages([...newMessages, { role: 'assistant', text: aiResponse }]);
+
+      setMessages([
+        ...newMessages,
+        { role: 'assistant', text: aiResponse, time: getTime() }
+      ]);
     } catch (err) {
-      setMessages([...newMessages, { role: 'assistant', text: '❌ Failed to get response.' }]);
+      setMessages([
+        ...newMessages,
+        { role: 'assistant', text: '❌ Failed to get response.', time: getTime() }
+      ]);
     } finally {
       setLoading(false);
     }
@@ -40,19 +50,22 @@ const App = () => {
             key={idx}
             style={{
               ...styles.message,
+              animation: 'fadeIn 0.3s ease',
               alignSelf: msg.role === 'user' ? 'flex-end' : 'flex-start',
               backgroundColor: msg.role === 'user' ? '#dcf8c6' : '#fff',
               borderTopLeftRadius: msg.role === 'user' ? 12 : 0,
               borderTopRightRadius: msg.role === 'user' ? 0 : 12,
+              position: 'relative'
             }}
           >
             {msg.text}
+            <span style={styles.timestamp}>{msg.time}</span>
           </div>
         ))}
 
         {loading && (
           <div style={{ ...styles.message, backgroundColor: '#eee', alignSelf: 'flex-start' }}>
-            Gemini is typing...
+            <TypingDots />
           </div>
         )}
 
@@ -75,9 +88,38 @@ const App = () => {
           ➤
         </button>
       </div>
+
+      {/* CSS animations */}
+      <style>{`
+        @keyframes fadeIn {
+          from { opacity: 0; transform: translateY(10px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes typing {
+          0% { opacity: 0.2 }
+          20% { opacity: 1 }
+          100% { opacity: 0.2 }
+        }
+
+        .typing span {
+          display: inline-block;
+          font-size: 1.2rem;
+          animation: typing 1.5s infinite;
+        }
+
+        .typing span:nth-child(2) { animation-delay: 0.2s; }
+        .typing span:nth-child(3) { animation-delay: 0.4s; }
+      `}</style>
     </div>
   );
 };
+
+const TypingDots = () => (
+  <div className="typing">
+    <span>.</span><span>.</span><span>.</span>
+  </div>
+);
 
 const styles = {
   container: {
@@ -92,7 +134,8 @@ const styles = {
     color: '#fff',
     padding: '1rem',
     fontSize: '1.2rem',
-    textAlign: 'center'
+    textAlign: 'center',
+    fontWeight: 'bold'
   },
   chatBox: {
     flex: 1,
@@ -108,8 +151,10 @@ const styles = {
     maxWidth: '70%',
     fontSize: '1rem',
     wordWrap: 'break-word',
-    boxShadow: '0 1px 2px rgba(0,0,0,0.15)'
+    boxShadow: '0 1px 2px rgba(0,0,0,0.15)',
+    transition: 'all 0.3s ease-in-out'
   },
+
   inputContainer: {
     display: 'flex',
     padding: '0.75rem',
@@ -124,7 +169,8 @@ const styles = {
     fontSize: '1rem',
     resize: 'none',
     outline: 'none',
-    backgroundColor: '#fff'
+    backgroundColor: '#fff',
+    transition: 'box-shadow 0.2s ease-in-out'
   },
   sendButton: {
     backgroundColor: '#128c7e',
@@ -136,8 +182,29 @@ const styles = {
     marginLeft: '0.5rem',
     fontSize: '1.2rem',
     cursor: 'pointer',
-    outline: 'none'
+    outline: 'none',
+    transition: 'transform 0.2s, box-shadow 0.2s'
   }
+,
+  bubbleContent: {
+  display: 'flex',
+  justifyContent: 'space-between',
+  alignItems: 'flex-end',
+  gap: '0.5rem',
+  flexWrap: 'wrap',
+},
+
+timestamp: {
+  fontSize: '0.72rem',
+  color: '#888',
+  marginLeft: 'auto',
+  marginTop: '0.3rem',
+  display: 'block',
+  alignSelf: 'flex-end',
+}
+
 };
+
+
 
 export default App;
